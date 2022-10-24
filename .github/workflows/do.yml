@@ -1,0 +1,31 @@
+name: Build and Deploy
+on:
+  push:
+    branches:
+      - master
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          port: ${{ secrets.PORT }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+          script: |
+            #stop all running containers
+            docker kill $(docker ps -q)
+            #remove all containers
+            docker rm $(docker ps -a -q)
+            #remove all images
+            docker rmi $(docker images -q)
+            #pull latest code
+            git pull
+            #build docker image
+            docker build -t latest .
+            #run docker container
+            docker run -it -d -p 5000:5000  latest
+            systemctl reload nginx
